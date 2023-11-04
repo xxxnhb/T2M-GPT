@@ -2,8 +2,8 @@ from models.rotation2xyz import Rotation2xyz
 import numpy as np
 from trimesh import Trimesh
 import os
-os.environ['PYOPENGL_PLATFORM'] = "osmesa"
-
+os.environ["PYOPENGL_PLATFORM"]="osmesa"
+os.environ["MUJOCO_GL"]="osmesa"
 import torch
 from visualize.simplify_loc2rot import joints2smpl
 import pyrender
@@ -17,7 +17,8 @@ from pyrender.constants import RenderFlags
 import math
 # import ffmpeg
 from PIL import Image
-
+# import pydevd_pycharm
+# pydevd_pycharm.settrace('10.8.32.196', port=19999, stdoutToServer=True, stderrToServer=True)
 class WeakPerspectiveCamera(pyrender.Camera):
     def __init__(self,
                  scale,
@@ -185,10 +186,11 @@ if __name__ == "__main__":
     filedir = args.filedir
     
     for filename in filename_list:
-        motions = np.load(filedir + filename+'_pred.npy')
+        # motions = np.load(filedir + filename+'_pred.npy')
+        motions = np.load(filedir+filename+'.npy')
         print('pred', motions.shape, filename)
         render(motions[0], outdir=filedir, device_id=0, name=filename, pred=True)
 
-        motions = np.load(filedir + filename+'_gt.npy')
-        print('gt', motions.shape, filename)
-        render(motions[0], outdir=filedir, device_id=0, name=filename, pred=False)
+        # motions = np.load(filedir + filename+'_gt.npy')
+        # print('gt', motions.shape, filename)
+        # render(motions[0], outdir=filedir, device_id=0, name=filename, pred=False)

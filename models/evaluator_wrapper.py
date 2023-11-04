@@ -46,7 +46,7 @@ class EvaluatorModelWrapper(object):
         opt.dim_text_hidden = 512
         opt.dim_coemb_hidden = 512
 
-        # print(opt)
+        print(opt)
 
         self.text_encoder, self.motion_encoder, self.movement_encoder = build_models(opt)
         self.opt = opt

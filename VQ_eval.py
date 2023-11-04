@@ -14,6 +14,8 @@ from models.evaluator_wrapper import EvaluatorModelWrapper
 import warnings
 warnings.filterwarnings('ignore')
 import numpy as np
+import pydevd_pycharm
+pydevd_pycharm.settrace('10.8.32.196', port=19999, stdoutToServer=True, stderrToServer=True)
 ##### ---- Exp dirs ---- #####
 args = option_vq.get_args_parser()
 torch.manual_seed(args.seed)

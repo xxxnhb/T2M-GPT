@@ -9,15 +9,14 @@ import models.vqvae as vqvae
 import utils.losses as losses 
 import options.option_vq as option_vq
 import utils.utils_model as utils_model
-from dataset import dataset_VQ, dataset_TM_eval
-import utils.eval_trans as eval_trans
+from dataset import dataset_smpl, dataset_TM_eval
 from options.get_eval_option import get_opt
 from models.evaluator_wrapper import EvaluatorModelWrapper
 import warnings
 warnings.filterwarnings('ignore')
 from utils.word_vectorizer import WordVectorizer
 import pydevd_pycharm
-pydevd_pycharm.settrace('10.8.32.196', port=19999, stdoutToServer=True, stderrToServer=True)
+# pydevd_pycharm.settrace('10.8.31.54', port=19999, stdoutToServer=True, stderrToServer=True)
 def update_lr_warm_up(optimizer, nb_iter, warm_up_iter, lr):
 
     current_lr = lr * (nb_iter + 1) / (warm_up_iter + 1)
@@ -42,10 +41,10 @@ logger.info(json.dumps(vars(args), indent=4, sort_keys=True))
 
 w_vectorizer = WordVectorizer('./glove', 'our_vab')
 
-if args.dataname == 'kit' : 
-    dataset_opt_path = 'checkpoints/kit/Comp_v6_KLD005/opt.txt'  
+if args.dataname == 'kit' :
+    dataset_opt_path = 'checkpoints/kit/Comp_v6_KLD005/opt.txt'
     args.nb_joints = 21
-    
+
 else :
     dataset_opt_path = 'checkpoints/t2m/Comp_v6_KLD005/opt.txt'
     args.nb_joints = 22
@@ -57,17 +56,13 @@ eval_wrapper = EvaluatorModelWrapper(wrapper_opt)
 
 
 ##### ---- Dataloader ---- #####
-train_loader = dataset_VQ.DATALoader(args.dataname,
+train_loader = dataset_smpl.DATALoader(args.dataname,
                                         args.batch_size,
                                         window_size=args.window_size,
                                         unit_length=2**args.down_t)
 
-train_loader_iter = dataset_VQ.cycle(train_loader)
+train_loader_iter = dataset_smpl.cycle(train_loader)
 
-val_loader = dataset_TM_eval.DATALoader(args.dataname, False,
-                                        32,
-                                        w_vectorizer,
-                                        unit_length=2**args.down_t)
 
 ##### ---- Network ---- #####
 net = vqvae.HumanVQVAE(args, ## use args to define different parameters in different quantizers
@@ -132,8 +127,6 @@ for nb_iter in range(1, args.warm_up_iter):
 
 ##### ---- Training ---- #####
 avg_recons, avg_perplexity, avg_commit = 0., 0., 0.
-best_fid, best_iter, best_div, best_top1, best_top2, best_top3, best_matching, writer, logger = eval_trans.evaluation_vqvae(args.out_dir, val_loader, net, logger, writer, 0, best_fid=1000, best_iter=0, best_div=100, best_top1=0, best_top2=0, best_top3=0, best_matching=100, eval_wrapper=eval_wrapper)
-
 for nb_iter in range(1, args.total_iter + 1):
     
     gt_motion = next(train_loader_iter)
@@ -166,7 +159,5 @@ for nb_iter in range(1, args.total_iter + 1):
         logger.info(f"Train. Iter {nb_iter} : \t Commit. {avg_commit:.5f} \t PPL. {avg_perplexity:.2f} \t Recons.  {avg_recons:.5f}")
         
         avg_recons, avg_perplexity, avg_commit = 0., 0., 0.,
-
-    if nb_iter % args.eval_iter==0 :
-        best_fid, best_iter, best_div, best_top1, best_top2, best_top3, best_matching, writer, logger = eval_trans.evaluation_vqvae(args.out_dir, val_loader, net, logger, writer, nb_iter, best_fid, best_iter, best_div, best_top1, best_top2, best_top3, best_matching, eval_wrapper=eval_wrapper)
-        
+    if nb_iter % 10 == 0:
+        torch.save({'net': net.state_dict()}, os.path.join(args.out_dir, str(nb_iter) + '.pth'))
