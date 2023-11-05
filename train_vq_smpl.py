@@ -159,5 +159,5 @@ for nb_iter in range(1, args.total_iter + 1):
         logger.info(f"Train. Iter {nb_iter} : \t Commit. {avg_commit:.5f} \t PPL. {avg_perplexity:.2f} \t Recons.  {avg_recons:.5f}")
         
         avg_recons, avg_perplexity, avg_commit = 0., 0., 0.,
-    if nb_iter % 10 == 0:
+    if nb_iter % 5000 == 0:
         torch.save({'net': net.state_dict()}, os.path.join(args.out_dir, str(nb_iter) + '.pth'))

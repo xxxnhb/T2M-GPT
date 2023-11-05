@@ -75,7 +75,6 @@ class VQMotionDataset(data.Dataset):
         self.std = std
         self.length_arr = np.array(length_list)
         self.data_dict = data_dict
-        self.name_list = new_name_list
 
     def inv_transform(self, data):
         return data * self.std + self.mean

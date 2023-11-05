@@ -1,7 +1,8 @@
 import os
 import torch
 import numpy as np
-
+import pydevd_pycharm
+# pydevd_pycharm.settrace('10.8.31.54', port=19999, stdoutToServer=True, stderrToServer=True)
 from torch.utils.tensorboard import SummaryWriter
 from os.path import join as pjoin
 from torch.distributions import Categorical
@@ -12,25 +13,19 @@ import options.option_transformer as option_trans
 import models.vqvae as vqvae
 import utils.utils_model as utils_model
 import utils.eval_trans as eval_trans
-from dataset import dataset_TM_train
-from dataset import dataset_TM_eval
-from dataset import dataset_tokenize
+from dataset import dataset_TM_smpl_train
+from dataset import dataset_tokenize_smpl
 import models.t2m_trans as trans
-from options.get_eval_option import get_opt
-from models.evaluator_wrapper import EvaluatorModelWrapper
 import warnings
 
 warnings.filterwarnings('ignore')
-import pydevd_pycharm
-
-# pydevd_pycharm.settrace('10.8.32.196', port=19999, stdoutToServer=True, stderrToServer=True)
 
 ##### ---- Exp dirs ---- #####
 args = option_trans.get_args_parser()
 torch.manual_seed(args.seed)
 
 args.out_dir = os.path.join(args.out_dir, f'{args.exp_name}')
-args.vq_dir = os.path.join("./dataset/KIT-ML" if args.dataname == 'kit' else "./dataset/HumanML3D", f'{args.vq_name}')
+args.vq_dir = os.path.join("./dataset/HumanML3D_SMPL", f'{args.vq_name}')
 os.makedirs(args.out_dir, exist_ok=True)
 os.makedirs(args.vq_dir, exist_ok=True)
 
@@ -40,17 +35,9 @@ writer = SummaryWriter(args.out_dir)
 logger.info(json.dumps(vars(args), indent=4, sort_keys=True))
 
 ##### ---- Dataloader ---- #####
-train_loader_token = dataset_tokenize.DATALoader(args.dataname, 1, unit_length=2 ** args.down_t)
-
-from utils.word_vectorizer import WordVectorizer
-
-w_vectorizer = WordVectorizer('./glove', 'our_vab')
-# val_loader = dataset_TM_eval.DATALoader(args.dataname, False, 32, w_vectorizer)
+train_loader_token = dataset_tokenize_smpl.DATALoader(args.dataname, 1, unit_length=2 ** args.down_t)
 
 dataset_opt_path = 'checkpoints/kit/Comp_v6_KLD005/opt.txt' if args.dataname == 'kit' else 'checkpoints/t2m/Comp_v6_KLD005/opt.txt'
-
-wrapper_opt = get_opt(dataset_opt_path, torch.device('cuda'))
-eval_wrapper = EvaluatorModelWrapper(wrapper_opt)
 
 ##### ---- Network ---- #####
 clip_model, clip_preprocess = clip.load("ViT-B/32", device=torch.device('cuda'),
@@ -104,18 +91,18 @@ right_num = 0
 nb_sample_train = 0
 
 ##### ---- get code ---- #####
-for batch in train_loader_token:
-    pose, name = batch
-    bs, seq = pose.shape[0], pose.shape[1]
+# for batch in train_loader_token:
+#     pose, name = batch
+#     bs, seq = pose.shape[0], pose.shape[1]
+#
+#     pose = pose.cuda().float()  # bs, nb_joints, joints_dim, seq_len
+#     target = net.encode(pose)
+#     target = target.cpu().numpy()
+#     np.save(pjoin(args.vq_dir, name[0] + '.npy'), target)
 
-    pose = pose.cuda().float()  # bs, nb_joints, joints_dim, seq_len
-    target = net.encode(pose)
-    target = target.cpu().numpy()
-    np.save(pjoin(args.vq_dir, name[0] + '.npy'), target)
-
-train_loader = dataset_TM_train.DATALoader(args.dataname, args.batch_size, args.nb_code, args.vq_name,
-                                           unit_length=2 ** args.down_t)
-train_loader_iter = dataset_TM_train.cycle(train_loader)
+train_loader = dataset_TM_smpl_train.DATALoader(args.dataname, args.batch_size, args.nb_code, args.vq_name,
+                                                unit_length=2 ** args.down_t)
+train_loader_iter = dataset_TM_smpl_train.cycle(train_loader)
 
 ##### ---- Training ---- #####
 # best_fid, best_iter, best_div, best_top1, best_top2, best_top3, best_matching, writer, logger = eval_trans.evaluation_transformer(
@@ -187,12 +174,14 @@ while nb_iter <= args.total_iter:
         right_num = 0
         nb_sample_train = 0
 
-    if nb_iter % args.eval_iter == 0:
-        best_fid, best_iter, best_div, best_top1, best_top2, best_top3, best_matching, writer, logger = eval_trans.evaluation_transformer(
-            args.out_dir, val_loader, net, trans_encoder, logger, writer, nb_iter, best_fid, best_iter, best_div,
-            best_top1, best_top2, best_top3, best_matching, clip_model=clip_model, eval_wrapper=eval_wrapper)
+    # if nb_iter % args.eval_iter == 0:
+    #     best_fid, best_iter, best_div, best_top1, best_top2, best_top3, best_matching, writer, logger = eval_trans.evaluation_transformer(
+    #         args.out_dir, val_loader, net, trans_encoder, logger, writer, nb_iter, best_fid, best_iter, best_div,
+    #         best_top1, best_top2, best_top3, best_matching, clip_model=clip_model, eval_wrapper=eval_wrapper)
 
-    if nb_iter == args.total_iter:
-        msg_final = f"Train. Iter {best_iter} : FID. {best_fid:.5f}, Diversity. {best_div:.4f}, TOP1. {best_top1:.4f}, TOP2. {best_top2:.4f}, TOP3. {best_top3:.4f}"
-        logger.info(msg_final)
-        break
+    # if nb_iter == args.total_iter:
+    #     msg_final = f"Train. Iter {best_iter} : FID. {best_fid:.5f}, Diversity. {best_div:.4f}, TOP1. {best_top1:.4f}, TOP2. {best_top2:.4f}, TOP3. {best_top3:.4f}"
+    #     logger.info(msg_final)
+    #     break
+    if nb_iter % 5000 == 0:
+        torch.save({'trans': trans_encoder.state_dict()}, os.path.join(args.out_dir, str(nb_iter) + '.pth'))

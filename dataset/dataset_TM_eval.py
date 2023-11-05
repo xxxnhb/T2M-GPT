@@ -16,9 +16,11 @@ def collate_fn(batch):
 
 
 '''For use of training text-2-motion generative model'''
+
+
 class Text2MotionDataset(data.Dataset):
-    def __init__(self, dataset_name, is_test, w_vectorizer, feat_bias = 5, max_text_len = 20, unit_length = 4):
-        
+    def __init__(self, dataset_name, is_test, w_vectorizer, feat_bias=5, max_text_len=20, unit_length=4):
+
         self.max_length = 20
         self.pointer = 0
         self.dataset_name = dataset_name
@@ -51,13 +53,13 @@ class Text2MotionDataset(data.Dataset):
 
         mean = np.load(pjoin(self.meta_dir, 'mean.npy'))
         std = np.load(pjoin(self.meta_dir, 'std.npy'))
-        
+
         if is_test:
             split_file = pjoin(self.data_root, 'test.txt')
         else:
             split_file = pjoin(self.data_root, 'val.txt')
 
-        min_motion_len = 40 if self.dataset_name =='t2m' else 24
+        min_motion_len = 40 if self.dataset_name == 't2m' else 24
         # min_motion_len = 64
 
         joints_num = self.joints_num
@@ -95,7 +97,7 @@ class Text2MotionDataset(data.Dataset):
                             text_data.append(text_dict)
                         else:
                             try:
-                                n_motion = motion[int(f_tag*fps) : int(to_tag*fps)]
+                                n_motion = motion[int(f_tag * fps): int(to_tag * fps)]
                                 if (len(n_motion)) < min_motion_len or (len(n_motion) >= 200):
                                     continue
                                 new_name = random.choice('ABCDEFGHIJKLMNOPQRSTUVW') + '_' + name
@@ -103,7 +105,7 @@ class Text2MotionDataset(data.Dataset):
                                     new_name = random.choice('ABCDEFGHIJKLMNOPQRSTUVW') + '_' + name
                                 data_dict[new_name] = {'motion': n_motion,
                                                        'length': len(n_motion),
-                                                       'text':[text_dict]}
+                                                       'text': [text_dict]}
                                 new_name_list.append(new_name)
                                 length_list.append(len(n_motion))
                             except:
@@ -132,7 +134,7 @@ class Text2MotionDataset(data.Dataset):
     def reset_max_len(self, length):
         assert length <= self.max_motion_length
         self.pointer = np.searchsorted(self.length_arr, length)
-        print("Pointer Pointing at %d"%self.pointer)
+        print("Pointer Pointing at %d" % self.pointer)
         self.max_length = length
 
     def inv_transform(self, data):
@@ -183,7 +185,7 @@ class Text2MotionDataset(data.Dataset):
         elif coin2 == 'single':
             m_length = (m_length // self.unit_length) * self.unit_length
         idx = random.randint(0, len(motion) - m_length)
-        motion = motion[idx:idx+m_length]
+        motion = motion[idx:idx + m_length]
 
         "Z Normalization"
         motion = (motion - self.mean) / self.std
@@ -196,18 +198,16 @@ class Text2MotionDataset(data.Dataset):
         return word_embeddings, pos_one_hots, caption, sent_len, motion, m_length, '_'.join(tokens), name
 
 
-
-
 def DATALoader(dataset_name, is_test,
-                batch_size, w_vectorizer,
-                num_workers = 8, unit_length = 4) : 
-    
-    val_loader = torch.utils.data.DataLoader(Text2MotionDataset(dataset_name, is_test, w_vectorizer, unit_length=unit_length),
-                                              batch_size,
-                                              shuffle = True,
-                                              num_workers=num_workers,
-                                              collate_fn=collate_fn,
-                                              drop_last = True)
+               batch_size, w_vectorizer,
+               num_workers=8, unit_length=4):
+    val_loader = torch.utils.data.DataLoader(
+        Text2MotionDataset(dataset_name, is_test, w_vectorizer, unit_length=unit_length),
+        batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+        collate_fn=collate_fn,
+        drop_last=True)
     return val_loader
 
 
